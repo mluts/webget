@@ -23,5 +23,6 @@ type TemplateHandler struct {
 }
 
 func (h TemplateHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	h.template.Execute(w, h.data)
 }
