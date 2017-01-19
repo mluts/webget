@@ -84,6 +84,8 @@ const listTemplate = `
 			Started
 		{{else if .Status | eq 2}}
 			Success
+		{{else if .Status | eq 3}}
+			Failed
 		{{end}}
 	</p>
 {{end}}
