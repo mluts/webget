@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/hashicorp/go-getter"
 	"log"
 )
 
@@ -19,12 +18,11 @@ type Download struct {
 }
 
 type Downloads struct {
-	List []Download
+	List    []Download
+	GetFile FileGetter
 }
 
-func downloadTo(url string, fname string) error {
-	return getter.GetFile(fname, url)
-}
+type FileGetter func(dst, src string) error
 
 func (d *Downloads) enqueue(url string, fname string) {
 	d.List = append(d.List, Download{
@@ -35,10 +33,14 @@ func (d *Downloads) enqueue(url string, fname string) {
 }
 
 func (d *Downloads) download(t *Download) {
-	log.Printf("Starting to download %v", t)
-	(*t).Status = Started
+	log.Printf("Starting to download %s to %s", t.Url, t.Fname)
+	t.Status = Started
 
-	err := downloadTo(t.Url, t.Fname)
+	if d.GetFile == nil {
+		panic("Getter is not set")
+	}
+
+	err := d.GetFile(t.Fname, t.Url)
 	if err != nil {
 		log.Printf("Failed: %v", err)
 		t.Status = Failure
