@@ -1,0 +1,39 @@
+{{define "download"}}
+	<p>
+		{{.Url}}
+	</p>
+	<p>
+		Status:
+		{{if .Status | eq 0}}
+			Enqueued
+		{{else if .Status  | eq 1}}
+			Started
+		{{else if .Status | eq 2}}
+			Success
+		{{end}}
+	</p>
+{{end}}
+
+<html>
+	<head>
+		<title>Downloads</title>
+	</head>
+
+	<body>
+		<h2>Enqueue</h2>
+		<form method="post" action="/">
+			<input type="text" name="src">
+			<input type="submit" value="Send">
+		</form>
+
+		<h2>Downloads:</h2>
+		<ul>
+			{{range .List}}
+				<li>
+					{{template "download" .}}
+				</li>
+			{{end}}
+		</ul>
+		</div>
+	</body>
+</html>

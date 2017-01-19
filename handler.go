@@ -1,28 +1,51 @@
 package main
 
 import (
+	"bytes"
 	"html/template"
+	"io"
+	"log"
 	"net/http"
 )
 
-type MethodHandler map[string]http.Handler
+type downloadsHandler struct {
+	Downloads *Downloads
+	template  *template.Template
+}
 
-func (m MethodHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	handler, ok := m[req.Method]
-	if !ok {
-		w.WriteHeader(405)
+func enqueueDownload(d *Downloads, w http.ResponseWriter, r *http.Request) {
+	src := r.FormValue("src")
+
+	dst, err := pickFilename(src)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	handler.ServeHTTP(w, req)
+	log.Printf("Enqueued %s to %s", src, dst)
+	d.enqueue(src, dst)
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-type TemplateHandler struct {
-	template *template.Template
-	data     interface{}
+func renderTemplate(t *template.Template, w http.ResponseWriter, name string, data interface{}) {
+	buf := bytes.NewBuffer(make([]byte, 0))
+	err := t.ExecuteTemplate(buf, name, data)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	} else {
+		w.Header().Add("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		io.Copy(w, buf)
+	}
 }
 
-func (h TemplateHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	h.template.Execute(w, h.data)
+func (d downloadsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		renderTemplate(d.template, w, "list.html", d.Downloads)
+	case http.MethodPost:
+		enqueueDownload(d.Downloads, w, r)
+	}
 }

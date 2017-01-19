@@ -9,13 +9,10 @@ import (
 const addr = ":8080"
 
 func main() {
-	data := "hello world"
+	http.Handle("/", downloadsHandler{
+		&Downloads{},
+		template.Must(template.New("").ParseGlob("./template/*.html"))})
 
-	handler := MethodHandler{
-		http.MethodGet: TemplateHandler{
-			template.Must(makeTemplate("./template/index.html")), &data}}
-
-	http.Handle("/", handler)
-	log.Printf("Initializing server at %s", addr)
+	log.Printf("Listening at %s", addr)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

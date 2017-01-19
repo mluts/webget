@@ -1,23 +1,50 @@
 package main
 
 import (
-	"bufio"
-	"io"
-	"net/http"
-	"os"
+	"github.com/hashicorp/go-getter"
+	"log"
 )
 
-func downloadTo(url string, fname string) (int64, error) {
-	file, err := os.OpenFile(fname, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
-	defer file.Close()
-	if err != nil {
-		return 0, err
-	}
+const (
+	Enqueued = 0
+	Started  = 1
+	Success  = 2
+	Failure  = 3
+)
 
-	res, err := http.Get(url)
-	if err != nil {
-		return 0, err
-	}
+type Download struct {
+	Url, Fname string
+	Status     int
+	Err        error
+}
 
-	return io.Copy(bufio.NewWriter(file), res.Body)
+type Downloads struct {
+	List []Download
+}
+
+func downloadTo(url string, fname string) error {
+	return getter.GetFile(fname, url)
+}
+
+func (d *Downloads) enqueue(url string, fname string) {
+	d.List = append(d.List, Download{
+		Url:    url,
+		Fname:  fname,
+		Status: Enqueued})
+	go d.download(&d.List[len(d.List)-1])
+}
+
+func (d *Downloads) download(t *Download) {
+	log.Printf("Starting to download %v", t)
+	(*t).Status = Started
+
+	err := downloadTo(t.Url, t.Fname)
+	if err != nil {
+		log.Printf("Failed: %v", err)
+		t.Status = Failure
+		t.Err = err
+	} else {
+		log.Printf("Success!")
+		t.Status = Success
+	}
 }
